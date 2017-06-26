@@ -50,66 +50,38 @@ Self-Driving Car Engineer Nanodegree Program
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
 
-## Tips
+## Model
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
+One of the formost challenges in this project was to tune parameters of the cost function and other parameters.
+First step was to transform the data about waypoints into the car coordinates and a 3d order polynomial was fitted to the data. Actual state of the vehicle was "shifted" into the future by 100 ms latency.
+In car coordinates initial car's position (x,y,psi) is (0,0,0). Speed remains the same as in global coordinates.
+Calculated the CTE as the value of the polynomial function in the point x = 0. EPSI is -arctan of the first derivative in the point x = 0. State vector is then passed to the optimizer.
+Returned value of delta and acceleration are used to actuate the position of the car.
 
-## Editor Settings
+The cost function parameters were tuned by trial and error method. They were tuned in order to reach maximum speed possible without touching the curb and breaking before turns.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+#State
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+The state vector is [x, y, ψ, ν, δ, a], where
 
-## Code Style
+x: cars x global position
+y: cars y global position
+ψ (psi): vehicle's angle in radians from the x-direction (radians)
+ν : vehicle's velocity
+δ (delta): steering angle
+a : acceleration (throttle)
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+#Actuators
+δ (delta): steering angle
+a : acceleration (throttle)
 
-## Project Instructions and Rubric
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+##Parameter tuning
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+#N and dt:
 
-## Hints!
+N is number of timesteps and dt is the time gap between each state. I choose timestep length 20 and dt=1s here. The choice of dt is also determined by the speed you choose. For fast speed you might want to quick adjustment to control the vehicle. By trial and error, I determined the value N and dt to be 20 and 0.1 and works well.
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+#Latency
 
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+Latency is handled by optimizing the cost function and averaging the first two actuator values of the solution.
