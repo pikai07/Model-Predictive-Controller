@@ -60,7 +60,7 @@ Returned value of delta and acceleration are used to actuate the position of the
 
 The cost function parameters were tuned by trial and error method. They were tuned in order to reach maximum speed possible without touching the curb and breaking before turns.
 
-#State
+# State
 
 The state vector is [x, y, ψ, ν, δ, a], where
 
@@ -71,17 +71,17 @@ y: cars y global position
 δ (delta): steering angle
 a : acceleration (throttle)
 
-#Actuators
+# Actuators
 δ (delta): steering angle
 a : acceleration (throttle)
 
 
-##Parameter tuning
+## Parameter tuning
 
-#N and dt:
+# N and dt:
 
 N is number of timesteps and dt is the time gap between each state. I choose timestep length 20 and dt=1s here. The choice of dt is also determined by the speed you choose. For fast speed you might want to quick adjustment to control the vehicle. By trial and error, I determined the value N and dt to be 20 and 0.1 and works well.
 
-#Latency
+# Latency
 
-Latency is handled by optimizing the cost function and averaging the first two actuator values of the solution.
+Latency is handled by optimizing the cost function and averaging out the first two actuator values of the solution.
