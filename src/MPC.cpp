@@ -32,7 +32,7 @@ double ref_cte = 0;
 double ref_epsi = 0;
 
 
-double ref_v = 70;    // started with 45 and then could go upto 70
+double ref_v = 75;    // started with 45 and then made it go upto 75 without having much swaying
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
