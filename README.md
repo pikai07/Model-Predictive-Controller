@@ -91,16 +91,16 @@ For the MPC implementation the result of the Model Predictive Control quiz was u
 
 The state vector (x,y,psi,v, steering angle, acceleration) ->
 
-x: cars x global position
-y: cars y global position
-psi: vehicle's angle in radians from the x-direction (radians)
-v: vehicle's velocity
-delta: steering angle
-a : acceleration (throttle)
+1. x: cars x global position
+2. y: cars y global position
+3. psi: vehicle's angle in radians from the x-direction (radians)
+4. v: vehicle's velocity
+5. delta: steering angle
+6. a : acceleration (throttle)
 
 # Actuators
-delta: steering angle
-a : acceleration (throttle)
+1. delta: steering angle
+2. a : acceleration (throttle)
 
 ## Parameter tuning
 
