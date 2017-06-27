@@ -8,8 +8,8 @@ using CppAD::AD;
 // TODO: Set the timestep length and duration
 // predicting to long is not good and will incrase instability
 
-// If the N*dt is to large, the prediction might compromise for the long end and prediction close to the car may be very bad.
-// Base on the speed of 70 I found 1s is a good choice
+
+// Based on the speed of 75 I found 1s is a good choice
 // Since the latency is about 0.1s so I choose 0.1s here
 
 size_t N = 10;    // tried with time step 10,25 and this was found to be the best setting
@@ -27,10 +27,6 @@ double dt = 0.10; // started with .2, then .15 and then .1  and this is the best
 // This is the length from front to CoG that has a similar radius.
 
 const double Lf = 2.67;
-
-double ref_cte = 0;
-double ref_epsi = 0;
-
 
 double ref_v = 75;    // started with 45 and then made it go upto 75 without having much swaying
 
@@ -65,12 +61,12 @@ class FG_eval {
     // TODO: Define the cost related the reference state and
     // any anything you think may be beneficial.
 
-    // cost with reference state
+    // cost with reference state, tuned emperifically
     // Three weights were tuned. Main one is cte. epsi and v are not critical.
 
     for (int i = 0; i < N; i++) {
-      fg[0] += 4000 * CppAD::pow(vars[cte_start + i] - ref_cte, 2);
-      fg[0] += CppAD::pow(vars[epsi_start + i] - ref_epsi, 2);
+      fg[0] += 4000 * CppAD::pow(vars[cte_start + i] , 2);
+      fg[0] += CppAD::pow(vars[epsi_start + i], 2);
       fg[0] += CppAD::pow(vars[v_start+ i] - ref_v, 2);
     }
 
@@ -283,8 +279,8 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   // creates a 2 element double vector.
   
 
-  // average the first two actuations
-  // since the latency is about 0.1s, mean of first two actuation was carried out to solve the latency issue
+  // Average the first two actuations
+  // Mean of first two actuation was carried out to solve the latency issue
 
   double delta = (solution.x[delta_start] + solution.x[delta_start+1]) / 2;
   double a = (solution.x[a_start] + solution.x[a_start+1]) / 2;
