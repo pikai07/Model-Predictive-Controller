@@ -52,36 +52,58 @@ Self-Driving Car Engineer Nanodegree Program
 
 ## Model
 
-One of the formost challenges in this project was to tune parameters of the cost function and other parameters.
-First step was to transform the data about waypoints into the car coordinates and a 3d order polynomial was fitted to the data. Actual state of the vehicle was "shifted" into the future by 100 ms latency.
+One of the stiffest challenges in this project was to tune parameters of the cost function and other parameters.
+First, a third degree polynomial is fitted to waypoints recieved from the simulator and the cross track error (cte) is obtained by evaluating the polynomial at current x position. Actual state of the vehicle was "shifted" into the future by 100 ms latency.
 In car coordinates initial car's position (x,y,psi) is (0,0,0). Speed remains the same as in global coordinates.
-Calculated the CTE as the value of the polynomial function in the point x = 0. EPSI is -arctan of the first derivative in the point x = 0. State vector is then passed to the optimizer.
+When we evaluate cte and epsi, the value of x is taken as zero. Also a negative sign was added to delta after it was observed that the car turns in the opposite direction of the predicted trajectory. The State vector is then passed to the optimizer.
 Returned value of delta and acceleration are used to actuate the position of the car.
 
 The cost function parameters were tuned by trial and error method. They were tuned in order to reach maximum speed possible without touching the curb and breaking before turns.
+The MPC cost is defined using the cte, epsi and velocity v. The cost also accounts for actuators (delta, a) values and the change in the actuator values as in the code.
+
+For the MPC implementation the result of the Model Predictive Control quiz was used as a starting point. To improve the controller, weights were added to the individual cost terms. This way each part of the cost function can be tuned individually to achieve a smooth result. The cost function definition is displayed below.
+
+for (int i = 0; i < N; i++) {
+      fg[0] += 4000 * CppAD::pow(vars[cte_start + i] , 2);
+      fg[0] += CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += CppAD::pow(vars[v_start+ i] - ref_v, 2);
+    }
+
+    // Higher weights mean minimizing the use of actuators.
+    for (int i = 0; i < N - 1; i++) {
+      fg[0] += 80000 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start+i], 2);
+    }
+
+    // Minimize the value gap between sequential actuations.
+    // Higher weights will influence the solver into keeping sequential values closer togther
+    for (int i = 0; i < N - 2; i++) {
+      fg[0] += 1000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start + i +1] - vars[a_start+i], 2);
+    }
+
 
 # State
 
-The state vector is [x, y, ψ, ν, δ, a], where
+The state vector (x,y,psi,v, steering angle, acceleration) ->
 
 x: cars x global position
 y: cars y global position
-ψ (psi): vehicle's angle in radians from the x-direction (radians)
-ν : vehicle's velocity
-δ (delta): steering angle
+psi: vehicle's angle in radians from the x-direction (radians)
+v: vehicle's velocity
+delta: steering angle
 a : acceleration (throttle)
 
 # Actuators
-δ (delta): steering angle
+delta: steering angle
 a : acceleration (throttle)
-
 
 ## Parameter tuning
 
-# N and dt:
+# N and dt (Timestamp length and elapsed time):
 
-N is number of timesteps and dt is the time gap between each state. I choose timestep length 20 and dt=1s here. The choice of dt is also determined by the speed you choose. For fast speed you might want to quick adjustment to control the vehicle. By trial and error, I determined the value N and dt to be 20 and 0.1 and works well.
+N is number of timesteps and dt is the time gap between each state. I first used N=10 and dt=0.01 to observe the performance of the model. I also tried N=15 till 25, but this resulted in the model having a farther prediction horizon and the solution would break at the curves. N=10 and dt=0.01 was finally chosen. The choice of dt is also determined by the speed you choose. For fast speed you might want to quick adjustment to control the vehicle. By trial and error, I determined the value N and dt to be 10 and 0.1 and works well.
 
 # Latency
 
-Latency is handled by optimizing the cost function and averaging out the first two actuator values of the solution.
+Latency is handled by optimizing the cost function and averaging out the first two actuator values of the solution. This approach was found to be more stable than setting dt > latency.
