@@ -50,66 +50,64 @@ Self-Driving Car Engineer Nanodegree Program
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
 
-## Tips
+## Model
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
+One of the stiffest challenges in this project was to tune parameters of the cost function and other parameters.
+First, a third degree polynomial is fitted to waypoints recieved from the simulator and the cross track error (cte) is obtained by evaluating the polynomial at current x position. Actual state of the vehicle was "shifted" into the future by 100 ms latency.
+In car coordinates initial car's position (x,y,psi) is (0,0,0). Speed remains the same as in global coordinates.
+When we evaluate cte and epsi, the value of x is taken as zero. Also a negative sign was added to delta after it was observed that the car turns in the opposite direction of the predicted trajectory. The State vector is then passed to the optimizer.
+Returned value of delta and acceleration are used to actuate the position of the car.
 
-## Editor Settings
+The cost function parameters were tuned by trial and error method. They were tuned in order to reach maximum speed possible without touching the curb and breaking before turns.
+The MPC cost is defined using the cte, epsi and velocity v. The cost also accounts for actuators (delta, a) values and the change in the actuator values as in the code.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+For the MPC implementation the result of the Model Predictive Control quiz was used as a starting point. To improve the controller, weights were added to the individual cost terms. This way each part of the cost function can be tuned individually to achieve a smooth result. Cost function is displayed below -
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+    // Initialize the cost value
+        fg[0] = 0;
 
-## Code Style
+    // Define the costs
+    for (int i = 0; i < N; i++) {
+      fg[0] += 4000 * CppAD::pow(vars[cte_start + i] , 2);
+      fg[0] += CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += CppAD::pow(vars[v_start+ i] - ref_v, 2);
+    }
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+    // Higher weights mean minimizing the use of actuators.
+    for (int i = 0; i < N - 1; i++) {
+      fg[0] += 80000 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start+i], 2);
+    }
 
-## Project Instructions and Rubric
+    // Minimize the value gap between sequential actuations.
+    // Higher weights will influence the solver into keeping sequential values closer togther
+    for (int i = 0; i < N - 2; i++) {
+      fg[0] += 1000 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start + i +1] - vars[a_start+i], 2);
+    }
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
+# State
 
-## Hints!
+The state vector (x,y,psi,v, steering angle, acceleration) ->
 
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
+1. x: cars x global position
+2. y: cars y global position
+3. psi: vehicle's angle in radians from the x-direction (radians)
+4. v: vehicle's velocity
+5. delta: steering angle
+6. a : acceleration (throttle)
 
-## Call for IDE Profiles Pull Requests
+# Actuators
+1. delta: steering angle
+2. a : acceleration (throttle)
 
-Help your fellow students!
+## Parameter tuning
 
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
+# N and dt (Timestamp length and elapsed time):
 
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
+N is number of timesteps and dt is the time gap between each state. I first used N=10 and dt=0.01 to observe the performance of the model. I also tried N=15 till 25, but this resulted in the model having a farther prediction horizon and the solution would break at the curves. N=10 and dt=0.01 was finally chosen. The choice of dt is also determined by the speed you choose. For fast speed you might want to quick adjustment to control the vehicle. By trial and error, I determined the value N and dt to be 10 and 0.1 and works well.
 
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
+# Latency
 
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
+Latency is handled by optimizing the cost function and averaging out the first two actuator values of the solution. This approach was found to be more stable than setting dt > latency.
