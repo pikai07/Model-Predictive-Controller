@@ -61,9 +61,13 @@ Returned value of delta and acceleration are used to actuate the position of the
 The cost function parameters were tuned by trial and error method. They were tuned in order to reach maximum speed possible without touching the curb and breaking before turns.
 The MPC cost is defined using the cte, epsi and velocity v. The cost also accounts for actuators (delta, a) values and the change in the actuator values as in the code.
 
-For the MPC implementation the result of the Model Predictive Control quiz was used as a starting point. To improve the controller, weights were added to the individual cost terms. This way each part of the cost function can be tuned individually to achieve a smooth result. The cost function definition is displayed below.
+For the MPC implementation the result of the Model Predictive Control quiz was used as a starting point. To improve the controller, weights were added to the individual cost terms. This way each part of the cost function can be tuned individually to achieve a smooth result. Cost function is displayed below -
 
-for (int i = 0; i < N; i++) {
+    // Initialize the cost value
+        fg[0] = 0;
+
+    // Define the costs
+    for (int i = 0; i < N; i++) {
       fg[0] += 4000 * CppAD::pow(vars[cte_start + i] , 2);
       fg[0] += CppAD::pow(vars[epsi_start + i], 2);
       fg[0] += CppAD::pow(vars[v_start+ i] - ref_v, 2);
